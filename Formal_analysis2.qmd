@@ -1,5 +1,68 @@
 ---
 title: "Formal_analysis2"
 format: html
+editor_options: 
+  chunk_output_type: console
 ---
 
+```{r}
+dataset <- read.csv("DAProject2.csv", stringsAsFactors = TRUE)
+#The Full model (Saturated Model) 
+full_model <- lm(BMI~Age*Sex*Education*Veg*Fruit*Year, data = dataset)
+#A more meaningful staurated model would be
+meaningful_fm <- lm(BMI~Age + Sex + Education + Fruit + Veg + Year +
+      Age*Sex + Age*Education + Sex*Education +
+      Fruit*Veg + Education*Fruit + Education*Veg, data = dataset)
+summary(meaningful_fm)
+
+step_model <- step(meaningful_fm, direction = "backward")
+model1 <- lm(BMI ~ Age + Sex + Education + Fruit + Veg + Age:Sex + Age:Education + 
+    Sex:Education + Fruit:Veg + Education:Fruit, data = dataset)
+summary(model1)
+step_model <- step(model1, direction = "backward")
+final_model <- lm(BMI ~ Age + Education + Veg + Fruit, data = dataset)
+summary(final_model)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+mean <- dataset%>%
+  summarise(mean_BMI = mean(BMI), 
+            .by = Year)
+ggplot(mean, aes(x = Year, y = mean_BMI))+
+  geom_line()
+```
+
+From the plot the it is suggested that there is no significant trend followed by the observation over 2008-2012
+
+```{r}
+#The simplest Model for question 1 
+model <- lm(BMI~ Age + Sex + Education+ Veg + Fruit +Year, data = dataset)
+summary(model)
+
+time_model <- lm(BMI~Year, data = dataset)
+summary(time_model)
+```
+
+Here year is not a significant predictor of BMI as the p-value is greater than 0.05, however we may still see an increase in BMI over the years due to the coefficient term being positive. Also note that there are no changes in the p-value when other predictor variables are included or excluded, therefore there is statistical evidence that year is not a significant predictor in predicting time.
+
+In conclusion there have been changes in BMI over time as seen from the plot, but changes in year is not what is causing the change in BMI. Thus, variation in BMI is explained by peoples education and lifestyle status rather than the year when data was collected.
+
+-----
+
+**Question 2**
+
+```{r}
+library(dplyr)
+
+dataset %>%
+  mutate(AgeGroup = cut(Age, breaks = seq(0, 100, by = 5))) %>%
+  group_by(AgeGroup) %>%
+  summarise(mean_BMI = mean(BMI, na.rm = TRUE)) %>%
+  plot()
+
+```
+
+\
+\
