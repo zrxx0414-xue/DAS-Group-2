@@ -5,9 +5,11 @@ editor_options:
   chunk_output_type: console
 ---
 
-We will be using the linear model function for our analysis as our response variable is continuous however we have categorical variables. From the age EDA we can conclude that there is a non-linear relationship between BMI and Age. Therefore in our model we have included the quadratic term of age.
+To investigate how BMI varies with demographic and lifestyle factors, a multiple linear regression model was fitted with BMI as the response variable. The explanatory variables included age, sex, education level, fruit intake, and vegetable intake.
 
-FINDING THE CORRECT MODEL FOR THE QUESTION OF INTERESTS
+Exploratory analysis suggested a non-linear relationship between BMI and age. To account for this, both age and its squared term were included in the model.In addition, selected interaction terms (age by sex, sex by education, and fruit by education) were included to allow for potential differences in effects across subgroups.
+
+
 
 ```{r}
 dataset <- read.csv("DAProject2.csv", stringsAsFactors = TRUE)
@@ -41,8 +43,7 @@ anova(model_add, model_final)
 #thus model with interaction terms is more significant. 
 ```
 
-The final model will be:
-
+The final model was chosen to balance explanatory power and interpretability:
 $$
 BMI_i = \beta_0 + \beta_1 \text{Age}_i + \beta_2 \text{Age}_i^2 + \beta_3 \cdot \mathbb{I}_{\mathrm{Sex}}(Male)+ \sum_{j=1}^{5}\beta_{4j}E_{ij}+\beta_5\cdot \mathbb{I}_{\mathrm{Fruit}}(Yes)+\beta_6\cdot \mathbb{I}_{\mathrm{Veg}}(Yes)+\beta_7 (\text{Age}_i \times \text{Sex}_i)+\sum_{j=1}^{5} \gamma_j (\text{Sex}_i \times E_{ij})+\sum_{j=1}^{5} \delta_j (\text{Fruit}_i \times E_{ij})+\varepsilon_i
 $$
