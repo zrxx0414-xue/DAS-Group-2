@@ -44,7 +44,7 @@ anova(model_add, model_final)
 The final model will be:
 
 $$
-BMI_i = \beta_0 + \beta_1 \text{Age}_i + \beta_2 \text{Age}_i^2 + \beta_3 \cdot \mathbb{I}_{\mathrm{Sex}}(Male)+ \sum_{j=1}^{5}\beta_{4j}E_ij+\beta_5\cdot \mathbb{I}_{\mathrm{Fruit}}(Yes)+\beta_6\cdot \mathbb{I}_{\mathrm{Veg}}(Yes)+\beta_7 (\text{Age}_i \times \text{Sex}_i)+\sum_{j=1}^{5} \gamma_j (\text{Sex}_i \times E_{ij})+\sum_{j=1}^{5} \delta_j (\text{Fruit}_i \times E_{ij})+\varepsilon_i
+BMI_i = \beta_0 + \beta_1 \text{Age}_i + \beta_2 \text{Age}_i^2 + \beta_3 \cdot \mathbb{I}_{\mathrm{Sex}}(Male)+ \sum_{j=1}^{5}\beta_{4j}E_{ij}+\beta_5\cdot \mathbb{I}_{\mathrm{Fruit}}(Yes)+\beta_6\cdot \mathbb{I}_{\mathrm{Veg}}(Yes)+\beta_7 (\text{Age}_i \times \text{Sex}_i)+\sum_{j=1}^{5} \gamma_j (\text{Sex}_i \times E_{ij})+\sum_{j=1}^{5} \delta_j (\text{Fruit}_i \times E_{ij})+\varepsilon_i
 $$
 
 -----
@@ -96,6 +96,7 @@ In conclusion there have been changes in BMI over time as seen from the plot, bu
 **Question 2**
 
 ```{r}
+#| include: FALSE
 #Fruit and Veg Correlation
 ##EDA
 library(ggplot2)
@@ -109,43 +110,16 @@ print(contingency_table)
 ##FA_Perform the Chi-squared test
 chi_test_result <- chisq.test(contingency_table)
 print(chi_test_result)
+```
 
+```{r}
 library(car)
 vif(model_final)
 ```
-
-Even though fruit and veg are correlated the model doesn't reflect high multicollinearity therefore it is okay to keep both terms.
+Based on the relationship of lifestyle factors we found above, even though Fruit and Veg are correlated, the model doesn't reflect high multicollinearity therefore it is reasonable to keep both terms.
 
 ```{r}
-model_q2 <- model_final
-summary(model_q2)
-
-#model diagnostics 
-#method_1
-library(performance)
-library(see)
-check_model(model_q2)
-check_model(model_q2,check = c("linearity","homogeneity"))
-check_model(model_q2,check = c("qq","normality"))
-
-library(ggplot2)
-#method_2
-library(sjPlot)
-diag.model_output <-  dataset %>% 
-  mutate(score_hat  = model_q2$fitted.values,
-         residual = model_q2$residuals)
-
-ggplot(diag.model_output, aes(x = score_hat, y = residual)) +
-  geom_point() +
-  labs(x = "FItted Values", y = "Residual", title = "Residuals v/s fitted plot") +
-  geom_hline(yintercept = 0, col = "blue", linewidth = 1)
-
-ggplot(diag.model_output, aes(x = residual))+
-  geom_histogram()
-plot(model_q2, which = 2)
-
-model_diag <- plot_model(model_q2,type = "diag")
-model_diag[[4]]
+check_model(model_q2,check = c("linearity","homogeneity","qq","normality"))
 ```
 
 \
