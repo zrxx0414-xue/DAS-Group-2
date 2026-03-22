@@ -5,28 +5,59 @@ editor_options:
   chunk_output_type: console
 ---
 
+We will be using the linear model function for our analysis as our response variable is continuous however we have categorical variables. From the age EDA we can conclude that there is a non-linear relationship between BMI and Age. Therefore in our model we have included the quadratic term of age.
+
+FINDING THE CORRECT MODEL FOR THE QUESTION OF INTERESTS
+
 ```{r}
 dataset <- read.csv("DAProject2.csv", stringsAsFactors = TRUE)
 #The Full model (Saturated Model) 
 full_model <- lm(BMI~Age*Sex*Education*Veg*Fruit*Year, data = dataset)
+summary(full_model)
 #A more meaningful staurated model would be
-meaningful_fm <- lm(BMI~Age + Sex + Education + Fruit + Veg + Year +
-      Age*Sex + Age*Education + Sex*Education +
-      Fruit*Veg + Education*Fruit + Education*Veg, data = dataset)
-summary(meaningful_fm)
+meaningful_fm_1 <- lm(BMI~Age + I(Age^2)+Sex + Education + Fruit + Veg + Year + Age*Sex + Age*Education + Sex*Education + Fruit*Veg + Education*Fruit + Education*Veg, data = dataset)
+summary(meaningful_fm_1)
 
-step_model <- step(meaningful_fm, direction = "backward")
-model1 <- lm(BMI ~ Age + Sex + Education + Fruit + Veg + Age:Sex + Age:Education + 
-    Sex:Education + Fruit:Veg + Education:Fruit, data = dataset)
-summary(model1)
-step_model <- step(model1, direction = "backward")
-final_model <- lm(BMI ~ Age + Education + Veg + Fruit, data = dataset)
-summary(final_model)
+aic_1 <- step(meaningful_fm_1, direction = "backward")
 ```
+
+```{r}
+model_initial <- lm(formula = BMI ~ Age + I(Age^2) + Sex + Education + Fruit+
+    Veg + Age:Sex + Sex:Education + Fruit:Veg + Fruit:Education, data = dataset)
+#Checking if interaction terms are significant 
+model_no_interaction <- update(model_full, . ~ . - Age:Sex)  
+anova(model_initial, model_no_interaction) #p-value < 0.05,
+model_no_interaction <- update(model_full, . ~ . - Sex:Education)
+anova(model_initial, model_no_interaction) #p-value < 0.05,
+model_no_interaction <- update(model_full, . ~ . - Fruit:Education)
+anova(model_initial, model_no_interaction) #p-value < 0.05,
+model_no_interaction <- update(model_full, . ~ . - Fruit:Veg)
+anova(model_initial, model_no_interaction)#p-value > 0.05 thus this interaction is not significant
+#THE FINAL MODEL FOR THE TWO QUESTION OF INTEREST IS 
+model_final <- lm(formula = BMI ~ Age + I(Age^2) + Sex + Education + Fruit+
+    Veg + Age:Sex + Sex:Education  + Fruit:Education, data = dataset)
+model_add <- lm(BMI~Age+I(Age^2)+Sex+Education+Veg+Fruit, data = dataset)
+anova(model_add, model_final)
+#thus model with interaction terms is more significant. 
+```
+
+The final model will be:
+
+$$
+BMI_i = \beta_0 + \beta_1 \text{Age}_i + \beta_2 \text{Age}_i^2 + \beta_3 \cdot \mathbb{I}_{\mathrm{Sex}}(Male)+ \sum_{j=1}^{5}\beta_{4j}E_ij+\beta_5\cdot \mathbb{I}_{\mathrm{Fruit}}(Yes)+\beta_6\cdot \mathbb{I}_{\mathrm{Veg}}(Yes)+\beta_7 (\text{Age}_i \times \text{Sex}_i)+\sum_{j=1}^{5} \gamma_j (\text{Sex}_i \times E_{ij})+\sum_{j=1}^{5} \delta_j (\text{Fruit}_i \times E_{ij})+\varepsilon_i
+$$
+
+-----
+
+**Question 1**
 
 ```{r}
 library(tidyverse)
 library(ggplot2)
+```
+
+```{r}
+#| eval: false
 mean <- dataset%>%
   summarise(mean_BMI = mean(BMI), 
             .by = Year)
@@ -37,31 +68,84 @@ ggplot(mean, aes(x = Year, y = mean_BMI))+
 From the plot the it is suggested that there is no significant trend followed by the observation over 2008-2012
 
 ```{r}
-#The simplest Model for question 1 
-model <- lm(BMI~ Age + Sex + Education+ Veg + Fruit +Year, data = dataset)
-summary(model)
+#The Model for question 1 
+model_q1 <-lm(formula = BMI ~ Age + I(Age^2) + Education +
+    Veg + Year + Age:Sex + Sex:Education + Fruit:Education, data = dataset)
+#Note that I have added the year term in this model becuase we are checking prevelance with time. 
+summary(model_q1)
 
 time_model <- lm(BMI~Year, data = dataset)
 summary(time_model)
+
+#we will chech the model diagnostics 
+check_model(model_q1)
+check_model(model_q1,check = c("linearity","homogeneity"))
+check_model(model_q1,check = c("qq","normality"))
+
+#complementary check no need to include it 
+#check_model(time_model)
+
 ```
 
 Here year is not a significant predictor of BMI as the p-value is greater than 0.05, however we may still see an increase in BMI over the years due to the coefficient term being positive. Also note that there are no changes in the p-value when other predictor variables are included or excluded, therefore there is statistical evidence that year is not a significant predictor in predicting time.
 
-In conclusion there have been changes in BMI over time as seen from the plot, but changes in year is not what is causing the change in BMI. Thus, variation in BMI is explained by peoples education and lifestyle status rather than the year when data was collected.
+In conclusion there have been changes in BMI over time as seen from the plot, but changes in year is not what is causing the hange in BMI. Thus, variation in BMI is explained by peoples education and lifestyle status rather than the year when data was collected.
 
------
+------------------------------------------------------------------------
 
 **Question 2**
 
 ```{r}
-library(dplyr)
+#Fruit and Veg Correlation
+##EDA
+library(ggplot2)
+ggplot(dataset, aes(x = Fruit, fill = Veg)) +
+  geom_bar(position = "fill") +
+  labs(y = "Proportion") +
+  theme_minimal()
+contingency_table <- table(dataset$Veg, dataset$Fruit)
+print(contingency_table)
 
-dataset %>%
-  mutate(AgeGroup = cut(Age, breaks = seq(0, 100, by = 5))) %>%
-  group_by(AgeGroup) %>%
-  summarise(mean_BMI = mean(BMI, na.rm = TRUE)) %>%
-  plot()
+##FA_Perform the Chi-squared test
+chi_test_result <- chisq.test(contingency_table)
+print(chi_test_result)
 
+library(car)
+vif(model_final)
+```
+
+Even though fruit and veg are correlated the model doesn't reflect high multicollinearity therefore it is okay to keep both terms.
+
+```{r}
+model_q2 <- model_final
+summary(model_q2)
+
+#model diagnostics 
+#method_1
+library(performance)
+library(see)
+check_model(model_q2)
+check_model(model_q2,check = c("linearity","homogeneity"))
+check_model(model_q2,check = c("qq","normality"))
+
+library(ggplot2)
+#method_2
+library(sjPlot)
+diag.model_output <-  dataset %>% 
+  mutate(score_hat  = model_q2$fitted.values,
+         residual = model_q2$residuals)
+
+ggplot(diag.model_output, aes(x = score_hat, y = residual)) +
+  geom_point() +
+  labs(x = "FItted Values", y = "Residual", title = "Residuals v/s fitted plot") +
+  geom_hline(yintercept = 0, col = "blue", linewidth = 1)
+
+ggplot(diag.model_output, aes(x = residual))+
+  geom_histogram()
+plot(model_q2, which = 2)
+
+model_diag <- plot_model(model_q2,type = "diag")
+model_diag[[4]]
 ```
 
 \
