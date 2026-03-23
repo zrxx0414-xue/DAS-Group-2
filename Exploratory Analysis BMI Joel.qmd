@@ -1,0 +1,125 @@
+---
+title: "Exploratory Analysis BMI"
+author: "Joel MacInnes"
+format: html
+editor: visual
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Load the necessary libraries
+
+library(ggplot2)
+library(tidyverse)
+library(patchwork)
+
+# Read in the data
+BMIdata <- read.csv("DAProject2.csv", stringsAsFactors = TRUE)
+
+# Create a useful column for exploratory plots
+BMIdata$FruitVeg <- interaction(BMIdata$Fruit, BMIdata$Veg)
+
+
+# Organise Education level in a more in ascending order regarding level of prestige
+BMIdata$Education <- factor(BMIdata$Education, 
+                            levels = c("No qualifications", "Other school level", 
+                                       "Standard grade or equiv", "Higher grade or equiv", 
+                                       "HNC/D or equiv", "Degree or higher"))
+
+
+
+
+
+```
+
+## Exploratory Analysis {#Explan}
+
+In order to answer the questions of interest, it may be useful to consider the spread of the data and a few relevant plots. 
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+# Boxplot indicating constant BMI across the years of the study
+YearBoxplot <- ggplot(BMIdata, aes(x = Year, y = BMI)) +
+  
+  # Making the plot more readable by reducing it's range on the BMI axis, and excluding outlier points
+  geom_boxplot(aes(group = Year), fill = "yellow4", colour = "grey", outlier.shape = NA) +
+  coord_cartesian(ylim = c(10, 45))
+
+# Histogram 
+BMIHist <- ggplot(BMIdata, aes(x = BMI)) +
+  geom_histogram(binwidth = 1 , fill = "yellow4", colour = "grey") +
+  labs(title = "Histogram of BMI scores", xlab = "BMI", ylab = "Frequency")
+
+YearBoxplot + BMIHist + plot_layout(ncol = 2)
+```
+*Figure 1 (left)* seems to demonstrate a very consistent spread of BMI across each year of the survey, while *Figure 1 (right)* reveals that the data is centered around 27.8, with a fairly modest variance. 
+
+As no clear visualisation of the relationships between variables is apparent, below, in *Figure 2*, we have made some custom plots to help understand this.
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+# Subset of the data which will help to create a more readable exploratory plot
+BMIdata_subset <- BMIdata %>%
+  filter(Education %in% c("No qualifications", "Degree or higher"))
+
+ggplot(BMIdata_subset, aes(x = Age, y = BMI)) + 
+  
+  geom_point(aes(colour = FruitVeg), size = 1.0) +
+  
+  facet_grid(Sex ~ Education) +
+  
+  # Mean line for reference
+  stat_summary(
+    aes(linetype = "Mean BMI"),       # maps the line to a new legend 
+    fun = mean,
+    geom = "line",
+    colour = "grey20",
+    size = 1.0) +
+  
+  # legend labels
+  scale_colour_manual(
+    values = c(
+      "No.No" = "red",
+      "Yes.No" = "orange",
+      "No.Yes" = "yellow",
+      "Yes.Yes" = "green"),
+    
+    labels = c(
+      "No.No" = "Neither",
+      "Yes.No" = "Fruit Only",
+      "No.Yes" = "Veg Only",
+      "Yes.Yes" = "Both")) +
+  
+  scale_linetype_manual(
+    values = c("Mean BMI" = "solid")) +
+  
+  # Legend title
+  labs(colour = "Recommended fruit/veg intake?", linetype = "")
+```
+
+
+As we can see, age seems to have some impact on BMI across subjects. There is some variability in the mean across education level (although we have only included the extremes for simplicity) while the spread of the data across male and female subjects also differs. There seems to be some correlation between education level and fruit and veg intake - although we will later see that this is not strong enough to justify leaving any of these variables out of our model. We proceed by fitting a simple linear model to our data and analysing the residual distributions:
+
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+fit <- lm(BMI ~ Education + Age + Sex, data = BMIdata)
+
+par(mfrow = c(1, 2))
+plot(fit, which = 1, id.n = 0)
+plot(fit, which = 2, id.n = 0)
+```
+
+In *Figure 3(left)*, we can see that the our errors are spread around zero, with *Figure 3(right)* showing that our residuals are close to being normally distributed, with heavier tails. Given our large sample size, it is unlikely that this will pose major issues.
