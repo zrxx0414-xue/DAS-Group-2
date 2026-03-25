@@ -3,6 +3,12 @@ title: "Formal_analysis2"
 format: html
 editor_options: 
   chunk_output_type: console
+
+execute: 
+  echo: false
+  warning: false
+  message: false
+  eval: true
 ---
 
 To investigate how BMI varies with demographic and lifestyle factors, a multiple linear regression model was fitted with BMI as the response variable. The explanatory variables included age, sex, education level, fruit intake, and vegetable intake.
@@ -10,6 +16,7 @@ To investigate how BMI varies with demographic and lifestyle factors, a multiple
 Exploratory analysis suggested a non-linear relationship between BMI and age. To account for this, both age and its squared term were included in the model.In addition, selected interaction terms (age by sex, sex by education, and fruit by education) were included to allow for potential differences in effects across subgroups.
 
 ```{r}
+#| include: false
 dataset <- read.csv("DAProject2.csv", stringsAsFactors = TRUE)
 #The Full model (Saturated Model) 
 full_model <- lm(BMI~Age*Sex*Education*Veg*Fruit*Year, data = dataset)
@@ -23,6 +30,7 @@ aic_1 <- step(meaningful_fm_1, direction = "backward")
 ```
 
 ```{r}
+#| include: false
 model_initial <- lm(formula = BMI ~ Age + I(Age^2) + Sex + Education + Fruit+
     Veg + Age:Sex + Sex:Education + Fruit:Veg + Fruit:Education, data = dataset)
 #Checking if interaction terms are significant 
@@ -35,8 +43,7 @@ anova(model_initial, model_no_interaction) #p-value < 0.05,
 model_no_interaction <- update(model_initial, . ~ . - Fruit:Veg)
 anova(model_initial, model_no_interaction)#p-value > 0.05 thus this interaction is not significant
 #THE FINAL MODEL FOR THE TWO QUESTION OF INTEREST IS 
-model_final <- lm(formula = BMI ~ Age + I(Age^2) + Sex + Education + Fruit+
-    Veg + Age:Sex + Sex:Education  + Fruit:Education, data = dataset)
+model_final <- lm(formula = BMI ~ Age + I(Age^2) + Sex + Education + Fruit+Veg + Age:Sex + Sex:Education  + Fruit:Education, data = dataset)
 model_add <- lm(BMI~Age+I(Age^2)+Sex+Education+Veg+Fruit, data = dataset)
 anova(model_add, model_final)
 #thus model with interaction terms is more significant
@@ -55,6 +62,13 @@ $$
 ```{r}
 library(tidyverse)
 library(ggplot2)
+library(performance)
+library(see)
+library(sjPlot)
+library(kableExtra)
+library(broom)
+library(knitr)
+library(car)
 ```
 
 ```{r}
@@ -70,25 +84,39 @@ From the plot the it is suggested that there is no significant trend followed by
 
 ```{r}
 #The Model for question 1 
-model_q1 <-lm(formula = BMI ~ Age + I(Age^2) + Education +
-    Veg + Year + Age:Sex + Sex:Education + Fruit:Education, data = dataset)
-#Note that I have added the year term in this model becuase we are checking prevelance with time. 
-summary(model_q1)
-
 time_model <- lm(BMI~Year, data = dataset)
 summary(time_model)
-
 #we will chech the model diagnostics 
-check_model(model_q1)
-check_model(model_q1,check = c("linearity","homogeneity"))
-check_model(model_q1,check = c("qq","normality"))
+check_model(time_model)
 
-#complementary check no need to include it 
-#check_model(time_model)
+
+#complementary model and its check no need to include it 
+#model_q1 <-lm(formula = BMI ~ Age + I(Age^2) + Education +
+    #Veg + Year + Age:Sex + Sex:Education + Fruit:Education, data = dataset)
+#Note that I have added the year term in the final model becuase we are checking prevelance with time. 
+#summary(model_q1)
+#check_model(model_q1)
+#check_model(model_q1,check = c("linearity","homogeneity"))
+#check_model(model_q1,check = c("qq","normality"))
+
 
 ```
 
-Here year is not a significant predictor of BMI as the p-value is greater than 0.05, however we may still see an increase in BMI over the years due to the coefficient term being positive. Also note that there are no changes in the p-value when other predictor variables are included or excluded, therefore there is statistical evidence that year is not a significant predictor in predicting time.
+```{r}
+tidy(time_model, conf.int = TRUE) %>%
+  select(term, estimate, p.value, conf.low, conf.high) %>%
+  kable(
+    digits = 3, 
+    booktabs = TRUE, 
+    col.names = c("Term", "Estimate", "P-Value", "Lower CI", "Upper CI") ) %>%
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down"), full_width = FALSE, font_size = 8) %>%
+  # Adjust column 1 (Predictors) to be 4cm wide
+  column_spec(1, width = "4cm") %>%
+  # Adjust the rest to be narrower (e.g., 2cm)
+  column_spec(2:5, width = "2cm")
+```
+
+Here year is not a significant predictor of BMI as the p-value is greater than 0.05, however we may still see an increase in BMI over the years due to the coefficient term being positive. The confidence interval contains 0, further suggesting that there is no prevalence in BMI from year to another.
 
 In conclusion there have been changes in BMI over time as seen from the plot, but changes in year is not what is causing the change in BMI. Thus, variation in BMI is explained by peoples education and lifestyle status rather than the year when data was collected.
 
@@ -100,7 +128,6 @@ In conclusion there have been changes in BMI over time as seen from the plot, bu
 #| include: false
 #Fruit and Veg Correlation
 ##EDA
-library(ggplot2)
 ggplot(dataset, aes(x = Fruit, fill = Veg)) +
   geom_bar(position = "fill") +
   labs(y = "Proportion") +
@@ -111,17 +138,9 @@ print(contingency_table)
 ##FA_Perform the Chi-squared test
 chi_test_result <- chisq.test(contingency_table)
 print(chi_test_result)
-
-library(car)
 collinearity <- vif(model_final)
 summary(model_final)
 ```
-
-----
-
-**CONFIDENCE INTERVALS** for the beta estimates
-
-----
 
 Based on the relationship of lifestyle factors we found above, even though Fruit and Veg are correlated, the model doesn't reflect high multicollinearity therefore it is reasonable to keep both terms.
 
@@ -129,10 +148,24 @@ Based on the relationship of lifestyle factors we found above, even though Fruit
 model_q2 <- model_final
 summary(model_q2)
 #model diagnostics 
-#method_1
-library(performance)
-library(see)
 check_model(model_q2,check = c("linearity","homogeneity","qq","normality"))
+```
+
+---
+
+**CONFIDENCE INTERVALS** for the beta estimates
+
+```{r}
+model_data <- tidy(model_q2, conf.int = TRUE) %>%
+  select(term, estimate, p.value, conf.low, conf.high)
+
+model_data %>%
+  kbl(booktabs = TRUE, linesep = "", digits = 2,
+      col.names = c("Term", "Estimate", "P-Value", "Lower CI", "Upper CI")) %>% 
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down"), full_width = FALSE, font_size = 9) %>%
+  column_spec(1, width = "4cm") %>%
+  column_spec(2:5, width = "2cm") %>%
+  row_spec(0:nrow(model_data), extra_css = "padding: 4px;") 
 ```
 
 \
