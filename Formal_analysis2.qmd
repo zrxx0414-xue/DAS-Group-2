@@ -151,7 +151,7 @@ summary(model_q2)
 check_model(model_q2,check = c("linearity","homogeneity","qq","normality"))
 ```
 
----
+------------------------------------------------------------------------
 
 **CONFIDENCE INTERVALS** for the beta estimates
 
