@@ -26,11 +26,35 @@ ggplot(mean, aes(x = Year, y = mean_BMI))+
 From the plot the it is suggested that there is no significant trend followed by the observation over 2008-2012
 
 ```{r}
-#The Model for question 1 
-time_model <- lm(BMI~Year, data = dataset)
-summary(time_model)
-#we will chech the model diagnostics 
-check_model(time_model)
+fit_year <- lm(BMI ~ Year,data = df)
+
+library(knitr)
+library(broom)
+
+coef_table <- tidy(fit_year)
+
+year_coef <- coef_table[coef_table$term == "Year", ]
+
+# ANOVA
+anova_res <- anova(fit_year)
+
+result <- data.frame(
+  Term = "Year",
+  Estimate = round(year_coef$estimate, 4),
+  F_statistic = round(anova_res$`F value`[1], 2),
+  P_value = ifelse(anova_res$`Pr(>F)`[1] < 0.001,
+                   "<0.001",
+                   signif(anova_res$`Pr(>F)`[1], 3))
+)
+
+kable(result,
+      caption = "Linear Trend of BMI over Time",
+      col.names = c("Term", "Estimate", "F", "P-value"),
+      booktabs = TRUE)
+```
+
+The estimated coefficient for year is small and not statistically significant, suggesting that BMI did not change systematically over time during the study period.
+Also the confidence interval is calculated to be [-0.03,0.07] which includes 0 therefore this further suggestes that there is no change in the BMI recorded in Scotland across 2008-2012. 
 
 
 #complementary model and its check no need to include it 
@@ -46,7 +70,7 @@ check_model(time_model)
 ```
 
 ```{r}
-tidy(time_model, conf.int = TRUE) %>%
+tidy(fit_year, conf.int = TRUE) %>%
   select(term, estimate, p.value, conf.low, conf.high) %>%
   kable(
     digits = 3, 
