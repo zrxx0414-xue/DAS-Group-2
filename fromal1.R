@@ -1,4 +1,4 @@
-df=read.csv("C:/Users/86185/Downloads/DAProject2.csv",stringsAsFactors = T)
+df=read.csv("DAProject2.csv",stringsAsFactors = T)
 ##question1
 fit_year <- lm(BMI ~ factor(Year), data = df)
 summary(fit_year)
