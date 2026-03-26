@@ -1,0 +1,108 @@
+---
+title: "Formal_analysis2"
+format: html
+editor_options: 
+  chunk_output_type: console
+
+execute: 
+  echo: false
+  warning: false
+  message: false
+  eval: true
+---
+
+To investigate how BMI varies with demographic and lifestyle factors, a multiple linear regression model was fitted with BMI as the response variable. The explanatory variables included age, sex, education level, fruit intake, and vegetable intake.
+
+Exploratory analysis suggested a non-linear relationship between BMI and age. To account for this, both age and its squared term were included in the model.In addition, selected interaction terms (age by sex, sex by education, and fruit by education) were included to allow for potential differences in effects across subgroups.
+
+```{r}
+#| include: false
+dataset <- read.csv("DAProject2.csv", stringsAsFactors = TRUE)
+#The Full model (Saturated Model) 
+full_model <- lm(BMI~Age*Sex*Education*Veg*Fruit*Year, data = dataset)
+summary(full_model)
+#A more meaningful staurated model would be
+meaningful_fm_1 <- lm(BMI~Age + I(Age^2)+Sex + Education + Fruit + Veg + Year + Age*Sex + Age*Education + Sex*Education + Fruit*Veg + Education*Fruit + Education*Veg, data = dataset)
+summary(meaningful_fm_1)
+
+aic_1 <- step(meaningful_fm_1, direction = "backward")
+
+```
+
+```{r}
+#| include: false
+model_initial <- lm(formula = BMI ~ Age + I(Age^2) + Sex + Education + Fruit+
+    Veg + Age:Sex + Sex:Education + Fruit:Veg + Fruit:Education, data = dataset)
+#Checking if interaction terms are significant 
+model_no_interaction <- update(model_initial, . ~ . - Age:Sex)  
+anova(model_initial, model_no_interaction) #p-value < 0.05,
+model_no_interaction <- update(model_initial, . ~ . - Sex:Education)
+anova(model_initial, model_no_interaction) #p-value < 0.05,
+model_no_interaction <- update(model_initial, . ~ . - Fruit:Education)
+anova(model_initial, model_no_interaction) #p-value < 0.05,
+model_no_interaction <- update(model_initial, . ~ . - Fruit:Veg)
+anova(model_initial, model_no_interaction)#p-value > 0.05 thus this interaction is not significant
+#THE FINAL MODEL FOR THE TWO QUESTION OF INTEREST IS 
+model_final <- lm(formula = BMI ~ Age + I(Age^2) + Sex + Education + Fruit+Veg + Age:Sex + Sex:Education  + Fruit:Education, data = dataset)
+model_add <- lm(BMI~Age+I(Age^2)+Sex+Education+Veg+Fruit, data = dataset)
+anova(model_add, model_final)
+#thus model with interaction terms is more significant
+```
+
+This was the final model chosen to balance explanatory power and interpretability:
+
+$$
+BMI_i = \beta_0 + \beta_1 \text{Age}_i + \beta_2 \text{Age}_i^2 + \beta_3 \cdot \mathbb{I}_{\mathrm{Sex}}(Male)+ \sum_{j=1}^{5}\beta_{4j}E_{ij}+\beta_5\cdot \mathbb{I}_{\mathrm{Fruit}}(Yes)+\beta_6\cdot \mathbb{I}_{\mathrm{Veg}}(Yes)+\beta_7 (\text{Age}_i \times \text{Sex}_i)+\sum_{j=1}^{5} \gamma_j (\text{Sex}_i \times E_{ij})+\sum_{j=1}^{5} \delta_j (\text{Fruit}_i \times E_{ij})+\varepsilon_i
+$$
+
+
+------------------------------------------------------------------------
+
+**Question 2**
+
+```{r}
+#| include: false
+#Fruit and Veg Correlation
+##EDA
+ggplot(dataset, aes(x = Fruit, fill = Veg)) +
+  geom_bar(position = "fill") +
+  labs(y = "Proportion") +
+  theme_minimal()
+contingency_table <- table(dataset$Veg, dataset$Fruit)
+print(contingency_table)
+
+##FA_Perform the Chi-squared test
+chi_test_result <- chisq.test(contingency_table)
+print(chi_test_result)
+collinearity <- vif(model_final)
+summary(model_final)
+```
+
+Based on the relationship of lifestyle factors we found above, even though Fruit and Veg are correlated, the model doesn't reflect high multicollinearity therefore it is reasonable to keep both terms.
+
+```{r}
+model_q2 <- model_final
+summary(model_q2)
+#model diagnostics 
+check_model(model_q2,check = c("linearity","homogeneity","qq","normality"))
+```
+
+------------------------------------------------------------------------
+
+**CONFIDENCE INTERVALS** for the beta estimates
+
+```{r}
+model_data <- tidy(model_q2, conf.int = TRUE) %>%
+  select(term, estimate, p.value, conf.low, conf.high)
+
+model_data %>%
+  kbl(booktabs = TRUE, linesep = "", digits = 2,
+      col.names = c("Term", "Estimate", "P-Value", "Lower CI", "Upper CI")) %>% 
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down"), full_width = FALSE, font_size = 9) %>%
+  column_spec(1, width = "4cm") %>%
+  column_spec(2:5, width = "2cm") %>%
+  row_spec(0:nrow(model_data), extra_css = "padding: 4px;") 
+```
+
+\
+\
