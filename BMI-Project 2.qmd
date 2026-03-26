@@ -1,0 +1,332 @@
+---
+title: "BMI Analysis"
+format:
+  html:
+    code-fold: false
+execute:
+  echo: false
+  warning: false
+  messag1e: false
+---
+
+```{r}
+#| include: false
+library(ggplot2)
+library(tidyverse)
+library(kableExtra)
+library(skimr)
+df <-read.csv("DAProject2.csv",stringsAsFactors = T)
+```
+
+# Introduction
+
+This project analyses the Body Mass Index (BMI) distributions to investigate how BMI is influenced by a range of socio-economic and lifestyle factors. Using regression-based methods, the analysis aims to quantify the change over the period 2008 to 2012, as well as quantify the relationships between BMI and potential explanatory variables. The overall goal is to assess the strength, significance, and predictive power of the resulting statistical model. Understanding these relationships is important for identifying key factors associated with BMI variation and informing potential public health insights.
+
+## Data Overview
+
+The dataset contains observations collected between 2008 and 2012, including demographic, socio-economic and lifestyle variables such as age, education and sex. The response variable in this analysis is BMI, which provides a quantitative measure for comparing individuals across time. The explanatory variables consist of the aforementioned lifestyle factors, along with age and sex, which are included to assess their potential influence on BMI.
+
+# Exploratory Analysis
+
+```{r}
+#| tbl-cap: Summary for factor variables
+#| label: tbl-factor
+summary_f <- as.data.frame(df%>%
+  select(!Year)%>%
+  skim(where(is.factor)))
+summary_f%>%
+  knitr::kable(
+    booktabs = TRUE,
+    digits = 4,
+    col.names = c("Type", "variable", "n_missing", "complete_rate", "ordered", "n_unique", "counts"))
+```
+
+```{r}
+#| tbl-cap: Summary for numerical variables
+#| label: tbl-numerical
+summary_n <- as.data.frame(df%>%
+  select(!Year)%>%
+  skim(where(is.numeric)))
+summary_n%>%
+  knitr::kable(
+    booktabs = TRUE,
+    digits = 4, 
+    col.names = c("Type", "Variable", "n_missing", "comp_rate", "mean", "sd", "p0", "p25", "p50", "p75","p100", "histogram")) %>%
+  kableExtra::kable_styling(
+    latex_options = c("hold_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 8
+  )
+```
+From the tables we can see that the mean and median BMI is around 27 and the mean Age is 50.1 with a high standard deviation of 17.3. There are also more females than males in the data set and most individulas recorded consume Fruit and Veg. 
+\
+\
+
+```{r}
+#| fig-width: 5.2
+#| fig-height: 2.8
+#| out-width: "60%"
+#| fig-cap: Change in BMI with respect to Year
+#| label: fig-boxplot
+ggplot(df, aes(x = Year, y = BMI)) +
+  
+  # Making the plot more readable by reducing it's range on the BMI axis, and excluding outlier points
+  geom_boxplot(aes(group = Year), fill = "darkturquoise", colour = "grey50", outlier.shape = NA) +
+  coord_cartesian(ylim = c(10, 45)) +
+  ggtitle("BMI Variation from 2008 - 2012")
+```
+
+BMI distributions appear similar across years, supporting the finding that year was not a significant predictor.
+
+To further explore relationships between lifestyle factors, a chi-squared test was conducted to assess the association between fruit and vegetable consumption. The results of the test indicated a strong evidence of association, suggesting that these variables capture related but distinct aspects of dietary behaviour, supporting their inclusion as predictors in subsequent regression modelling.
+
+```{r}
+#| tbl-cap: Chi-square Test of Association between Fruit and Vegetable Intake
+#| label: tbl-chi
+library(knitr)
+
+chi <- chisq.test(table(df$Fruit, df$Veg))
+
+result <- data.frame(
+  Test = "Chi-square test",
+  `Chi-square` = round(chi$statistic, 2),
+  Df = chi$parameter,
+  `P-value` = ifelse(chi$p.value < 0.001, "<0.001", round(chi$p.value, 3))
+)
+
+kable(result,
+      booktabs = TRUE,
+      align = "c")
+```
+
+This was built upon visually using a proportional bar chart, which illustrates the distribution of vegetable consumption across different levels of fruit intake. The plot suggests that there is a strong evidence of association between fruit and vegetable intake between these variables, with proportions varying across categories, indicating that individuals with different fruit consumption levels tend to have differing vegetable consumption patterns.
+
+```{r}
+#| fig-width: 5.5
+#| fig-height: 4
+#| out-width: "65%"
+#| fig-cap: Bar Plot depicting Fruit & Vegetable Choices
+#| label: fig-bar
+ggplot(df, aes(x = Fruit, fill = Veg)) +
+   geom_bar(position = "fill") +
+   labs(title='Proportion of Vegetable Intake by Fruit Consumption',
+   y = "Proportion")+
+  theme_minimal()
+```
+
+These findings justify the inclusion of both variables in the regression model, as they may capture related but distinct aspects of dietary behavior.
+
+In addition,quadratic relationship suggests that BMI increases with age up to middle age before gradually decreasing at older ages.
+
+```{r}
+#| fig-width: 7
+#| fig-height: 4.5
+#| out-width: "80%" 
+#| fig-cap: Scatterplot for BMI vs Age
+#| label: fig-scatter
+ggplot(df, aes(x = Age, y = BMI)) +
+   geom_point(alpha = 0.3) +
+   geom_smooth(method = "loess", color = "blue", se = TRUE) +
+   labs(
+     title = "The relationship between BMI and Age",
+     x = "Age",
+     y = "BMI") +
+   theme_minimal()
+```
+
+# Formal Analysis
+
+## Effect of Time on BMI
+
+To investigate whether BMI changed over time, a linear model was fitted with year included as a continuous variable.
+
+$$
+BMI_i=\beta_0+\beta_1 Year_i+\varepsilon_i
+$$
+
+Where $\beta_1$ represents the average change in BMI per year.
+
+```{r}
+fit_year <- lm(BMI ~ Year,data = df)
+
+library(knitr)
+library(broom)
+
+coef_table <- tidy(fit_year)
+
+year_coef <- coef_table[coef_table$term == "Year", ]
+
+# ANOVA
+anova_res <- anova(fit_year)
+
+result <- data.frame(
+  Term = "Year",
+  Estimate = round(year_coef$estimate, 4),
+  F_statistic = round(anova_res$`F value`[1], 2),
+  P_value = ifelse(anova_res$`Pr(>F)`[1] < 0.001,
+                   "<0.001",
+                   signif(anova_res$`Pr(>F)`[1], 3))
+)
+
+kable(result,
+      caption = "Linear Trend of BMI over Time",
+      col.names = c("Term", "Estimate", "F", "P-value"),
+      booktabs = TRUE)
+```
+
+The estimated coefficient for year is small and not statistically significant, suggesting that BMI did not change systematically over time during the study period.
+
+## Multivariable Effects on BMI
+
+### Model Specification
+
+To investigate how BMI varies with demographic and lifestyle factors, a multiple linear regression model was fitted with BMI as the response variable. The explanatory variables included age, sex, education level, fruit intake, and vegetable intake.
+
+Exploratory analysis suggested a non-linear relationship between BMI and age. To account for this, both age and its squared term were included in the model.In addition, selected interaction terms (age by sex, sex by education, and fruit by education) were included to allow for potential differences in effects across subgroups.
+
+The final model was chosen to balance explanatory power and interpretability:
+
+$$
+\begin{aligned}BMI_i &= \beta_0 + \beta_1 \text{Age}_i + \beta_2 \text{Age}_i^2 + \beta_3 \cdot \mathbb{I}_{\{\mathrm{Sex}\}}(\mathrm{Male}) + \sum_{j=1}^{5} \beta_{4j} E_{ij} + \beta_5 \cdot \mathbb{I}_{\{\mathrm{Fruit}\}}(\mathrm{Yes})+ \beta_6 \cdot \mathbb{I}_{\{\mathrm{Veg}\}}(\mathrm{Yes}) \\&\quad + \beta_7 (\text{Age}_i \times \text{Sex}_i)+ \sum_{j=1}^{5} \gamma_j (\text{Sex}_i \times E_{ij})+ \sum_{j=1}^{5} \delta_j (\text{Fruit}_i \times E_{ij})+ \varepsilon_i\end{aligned}
+$$
+
+where:
+
+$BMI_{i}$ : Body Mass Index for individual i
+
+$Age_i$ : Age (in years) for individual i
+
+$Sex_i$ : Indicator variable for sex of individual i
+
+$E_{ij}$ : Indicator variable for education level j for individual i
+
+$Fruit_i$ : Indicator variable for fruit intake for individual i
+
+$Veg_i$ : Indicator variable for vegetable intake for individual i
+
+$\beta_0$ : Intercept term
+
+$\beta_1$ : Coefficient representing the linear effect of age
+
+$\beta_2$ : Coefficient representing the quadratic effect of age
+
+$\beta_3$ : Coefficient representing the effect of sex
+
+$\beta_{4j}$ : Coefficients representing the effects of education levels j = 1,...,5
+
+$\beta_5$ : Coefficient representing the effect of fruit intake
+
+$\beta_6$ : Coefficient representing the effect of vegetable intake
+
+$\beta_7$ : Coefficient representing the interaction between age and sex
+
+$\gamma_{j}$ : Coefficients representing the interaction between sex and education levels j
+
+$\delta_j$ : Coefficients representing the interaction between fruit intake and education levels j
+
+$\varepsilon_i$ : Random error term for individual i
+
+Reference categories:
+
+Sex = Female
+
+Education = Baseline education category (reference level)
+
+Fruit = No fruit intake
+
+Veg = No vegetable intake
+
+All interaction terms are interpreted relative to these reference categories.
+
+### Model Selection
+
+To assess whether including the interaction terms improve the model fits, a model without interactions was compared with the final model including interactions.
+
+```{r}
+model_final <- lm(formula = BMI ~ Age + I(Age^2) + Sex + Education + Fruit+
+    Veg + Age:Sex + Sex:Education  + Fruit:Education, data = df)
+model_add <- lm(BMI~Age+I(Age^2)+Sex+Education+Veg+Fruit, data = df)
+
+anova_res <- anova(model_add, model_final)
+
+anova_table <- data.frame(
+  Comparison = "Without interactions vs With interactions",
+  Df = anova_res$Df[2],
+  `Sum of Squares` = round(anova_res$`Sum of Sq`[2], 1),
+  `F-statistic` = round(anova_res$F[2], 2),
+  `P-value` = ifelse(anova_res$`Pr(>F)`[2] < 0.001,
+                     "<0.001",
+                     signif(anova_res$`Pr(>F)`[2], 3))
+)
+
+kable(anova_table,
+      caption = "Model Comparison: Effect of Including Interaction Terms",
+      booktabs = TRUE,
+      align = "c")
+```
+
+The comparison indicated that the inclusion of interaction terms improved the model fit, supporting their retention in the final model.
+
+### Results
+
+```{r}
+model_data <- tidy(model_final, conf.int = TRUE) %>%
+  dplyr::select(term, estimate, p.value, conf.low, conf.high) %>%
+  filter(term %in% c(
+    "Age",
+    "I(Age^2)",
+    "FruitYes",
+    "VegYes",
+    "EducationNo qualifications"
+  )) %>%
+  dplyr::mutate(term = dplyr::recode(term,
+                                   "Age" = "Age",
+                                   "I(Age^2)" = "Age²",
+                                   "FruitYes" = "Fruit intake (Yes)",
+                                   "VegYes" = "Vegetable intake (Yes)",
+                                   "EducationNo qualifications" = "No qualifications"
+))
+
+model_data %>%
+  knitr::kable(
+    booktabs = TRUE,
+    digits = 4,
+    col.names = c("Term", "Estimate", "P-Value", "Lower CI", "Upper CI")
+  ) %>%
+  kableExtra::kable_styling(
+    latex_options = c("hold_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 8
+  )
+```
+
+From the confidence interval estimates, we can conclude that, Age was positively associated with BMI, with an estimated increase of 0.30 BMI units per additional year, holding other variables constant. The quadratic age term was negative and significantly significant, confirming a non-linear relationship between age and BMI in which BMI increases with age at a decreasing rate. Individuals with no qualifications had an estimated BMi 0.59 units higher than the reference education group. Fruit intake was associated with a decrease of 0.42 BMI units compared to no fruit intake. Vegetable intake was associated with a decrease of 0.36 BMI units compared to no vegetable intake.
+
+Also to check multicollinearity, we use the VIF function from library car, and the result suggest that there is no multicollinearity between the two variables since the adjusted VIF is less than 5, except from Age and Age\^2
+
+### Diagnostics Plots
+
+```{r}
+#| fig-width: 7
+#| fig-height: 4.0
+#| out-width: "70%" 
+#| fig-cap: QOI 2 diagnostic plot
+#| label: fig-diag
+
+library(performance)
+library(see)
+
+check_model(model_final,check = c("linearity","homogeneity","qq","normality"))
+```
+
+Diagnostic plots suggest that the assumptions of linearity and homoscedasticity are reasonably satisfied. Although the Q–Q plot shows some deviation from normality in the tails, this is not substantial given the large sample size. Overall, no major violations of model assumptions are evident.
+
+# Conclusion
+
+In conclusion, this analysis investigated the relationship between BMI and a range of demographic and lifestyle factors using data from 2008 to 2012. The results indicate that there was no statistically significant change in BMI over time, suggesting that overall BMI levels remained relatively stable across the study period.
+
+The analysis identified age as a key predictor of BMI, with evidence of a significant non-linear relationship. The inclusion of a quadratic age term improved model fit, indicating that the effect of age on BMI varies across different age groups rather than following a constant trend.
+
+While dietary variables such as fruit and vegetable consumption showed evidence of association in the exploratory analysis and contributed to the modelling framework, variables such as sex were not found to be statistically significant once other factors were accounted for. This suggests that their explanatory power is limited within the context of this model.
+
+Overall, the final model provides reasonable representation of the factors influencing BMI, particularly through the inclusion of a non-linear age effect. Nevertheless, the presence of unexplained variability suggests that the model could be improved by incorporating more detailed measures of lifestyle and social-economic status, such as physical activity levels or income. Additionally, extending the model to include interaction terms or alternative non-linear structures may allow for a more accurate representation of underlying relationships.
