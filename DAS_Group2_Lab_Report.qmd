@@ -31,7 +31,7 @@ df <-read.csv("DAProject2.csv",stringsAsFactors = T)
 
 # Introduction
 
-This project analyses the Body Mass Index (BMI) distributions in Scotland to investigate how BMI is influenced by a range of socio-economic and lifestyle factors. Using regression-based methods, the analysis aims to quantify the change over the period 2008 to 2012, as well as quantify the relationships between BMI and the mentioned factors. The overall goal is to assess changes in BMI with time and the effect of the factors on BMI, by testing the strength and significance of the resulting statistical model. Understanding these relationships is important for identifying key factors associated with BMI variation and informing potential public health insights.
+This project analyses the Body Mass Index (BMI) distributions in Scotland to investigate how BMI is influenced by a range of socio-economic and lifestyle factors. Using regression-based methods, the analysis aims to quantify the change in BMI over the period 2008 to 2012, as well as quantify the relationships between BMI and age, gender, socio-economic status and lifestyle factors. The overall goal is to assess changes in BMI with time and the effect of the factors on BMI, by testing the strength and significance of the resulting statistical model. Understanding these relationships is important for identifying key factors associated with BMI variation and informing potential public health insights.
 
 ## Data Overview
 
@@ -192,6 +192,7 @@ $$
 $$
 
 where:
+
 $BMI_{i}$ : Body Mass Index for individual i
 
 $Age_i$ : Age (in years) for individual i
