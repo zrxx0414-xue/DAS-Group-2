@@ -31,10 +31,28 @@ The dataset contains observations collected between 2008 and 2012, including dem
 ```{r}
 df <-read.csv("DAProject2.csv",stringsAsFactors = TRUE)
 library(tidyverse)
-library(skimr)    
-df%>%
+library(skimr)       
+summary_f <- as.data.frame(df%>%
   select(!Year)%>%
-  skim()
+  skim(where(is.factor)))
+summary_f%>%
+  knitr::kable(
+    booktabs = TRUE,
+    digits = 4,
+    col.names = c("Type", "variable", "n_issing", "complete_rate", "ordered", "n_unique", "counts"))
+summary_n <- as.data.frame(df%>%
+  select(!Year)%>%
+  skim(where(is.numeric)))
+summary_n%>%
+  knitr::kable(
+    booktabs = TRUE,
+    digits = 4, 
+    col.names = c("Type", "Variable", "n_missing", "comp_rate", "mean", "sd", "p0", "p25", "p50", "p75","p100", "histogram")) %>%
+  kableExtra::kable_styling(
+    latex_options = c("hold_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 8
+  )
 ```
 
 ```{r}
