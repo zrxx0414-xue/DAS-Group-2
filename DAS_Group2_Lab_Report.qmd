@@ -1,12 +1,23 @@
 ---
-title: "BMI Analysis"
+title: "BMI Analysis from 2008-2012"
 format:
-  html:
-    code-fold: false
+  pdf:
+    fig-pos: "H"
+    number-sections: true
+    tbl-cap-location: top
+    fig-cap-location: bottom
+    number-depth: 2
+    geometry:
+      - top=1cm
+      - bottom=1cm
+      - left=2cm
+      - right=2cm
+editor: visual
 execute:
   echo: false
   warning: false
   messag1e: false
+number-sections: true
 ---
 
 ```{r}
