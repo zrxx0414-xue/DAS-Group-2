@@ -13,9 +13,9 @@ execute:
 #| include: false
 library(ggplot2)
 library(tidyverse)
-#df <-read.csv("C:/Users/86185/Downloads/DAProject2.csv",stringsAsFactors = T)
-df <-read.csv("DAProject2.csv",stringsAsFactors = TRUE)
-
+library(kableExtra)
+library(skimr)
+df <-read.csv("DAProject2.csv",stringsAsFactors = T)
 ```
 
 # Introduction
@@ -29,9 +29,8 @@ The dataset contains observations collected between 2008 and 2012, including dem
 # Exploratory Analysis
 
 ```{r}
-df <-read.csv("DAProject2.csv",stringsAsFactors = TRUE)
-library(tidyverse)
-library(skimr)       
+#| tbl-cap: Summary for factor variables
+#| label: tbl-factor
 summary_f <- as.data.frame(df%>%
   select(!Year)%>%
   skim(where(is.factor)))
@@ -39,7 +38,12 @@ summary_f%>%
   knitr::kable(
     booktabs = TRUE,
     digits = 4,
-    col.names = c("Type", "variable", "n_issing", "complete_rate", "ordered", "n_unique", "counts"))
+    col.names = c("Type", "variable", "n_missing", "complete_rate", "ordered", "n_unique", "counts"))
+```
+
+```{r}
+#| tbl-cap: Summary for numerical variables
+#| label: tbl-numerical
 summary_n <- as.data.frame(df%>%
   select(!Year)%>%
   skim(where(is.numeric)))
@@ -54,69 +58,43 @@ summary_n%>%
     font_size = 8
   )
 ```
+From the tables we can see that the mean and median BMI is around 27 and the mean Age is 50.1 with a high standard deviation of 17.3. There are also more females than males in the data set and most individulas recorded consume Fruit and Veg. 
+\
+\
 
 ```{r}
-# Boxplot indicating constant BMI across the years of the study
+#| fig-width: 5.2
+#| fig-height: 2.8
+#| out-width: "60%"
+#| fig-cap: Change in BMI with respect to Year
+#| label: fig-boxplot
 ggplot(df, aes(x = Year, y = BMI)) +
   
   # Making the plot more readable by reducing it's range on the BMI axis, and excluding outlier points
   geom_boxplot(aes(group = Year), fill = "darkturquoise", colour = "grey50", outlier.shape = NA) +
-  coord_cartesian(ylim = c(10, 45))
-```
-BMI distributions appear to be consistent across each year of the, suggesting that the year of the  survey is not a significant predictor. Below is a grid of scatterplots, showing the spread of BMI at the two most extreme education levels only, where we can see some relationship between sex, socioeconomic status, lifestyle factors, and BMI.
-
-
-```{r}
-
-# Create a useful column for exploratory plots
-df$FruitVeg <- interaction(df$Fruit, df$Veg)
-# Organise Education level in a more interpretable manner (ranging from lowest to highest level of prestige)
-df$Education <- factor(df$Education, 
-                            levels = c("No qualifications", "Other school level", 
-                                       "Standard grade or equiv", "Higher grade or equiv", 
-                                       "HNC/D or equiv", "Degree or higher"))
-# Subset of the data which will help to create a more readable exploratory plot
-df_subset <- df %>%
-  filter(Education %in% c("No qualifications", "Degree or higher"))
-
-ggplot(df_subset, aes(x = Age, y = BMI)) + 
-  
-  geom_point(aes(colour = FruitVeg), size = 1.0) +
-  
-  facet_grid(Sex ~ Education) +
-  
-  # legend labels
-  scale_colour_manual(
-    values = c(
-      "No.No" = "red",
-      "Yes.No" = "coral1",
-      "No.Yes" = "darkorange",
-      "Yes.Yes" = "darkturquoise"),
-    
-    labels = c(
-      "No.No" = "Neither",
-      "Yes.No" = "Fruit Only",
-      "No.Yes" = "Veg Only",
-      "Yes.Yes" = "Both")) +
-  
-  # Legend title
-  labs(colour = "Recommended fruit/veg intake?")
+  coord_cartesian(ylim = c(10, 45)) +
+  ggtitle("BMI Variation from 2008 - 2012")
 ```
 
-BMI appears to be higher among those with poorer levels of education diets compared to those that are highly educated and follow better diets respectively. BMI also appears more varied among females than males. There appears to be some correlation between fruit and vegetable intake, and education level, but this is not significant, so we will likely include both socioeconomic and lifestyle factors in our model.
-To further explore relationships between lifestyle factors, a chi-squared test was conducted to assess the association between fruit and vegetable consumption. The results of the test indicated whether these variables are independent or exhibit a significant relationship.
+BMI distributions appear similar across years, supporting the finding that year was not a significant predictor.
+
+To further explore relationships between lifestyle factors, a chi-squared test was conducted to assess the association between fruit and vegetable consumption. The results of the test indicated a strong evidence of association, suggesting that these variables capture related but distinct aspects of dietary behaviour, supporting their inclusion as predictors in subsequent regression modelling.
 
 ```{r}
+#| tbl-cap: Chi-square Test of Association between Fruit and Vegetable Intake
+#| label: tbl-chi
 library(knitr)
+
 chi <- chisq.test(table(df$Fruit, df$Veg))
+
 result <- data.frame(
   Test = "Chi-square test",
   `Chi-square` = round(chi$statistic, 2),
   Df = chi$parameter,
   `P-value` = ifelse(chi$p.value < 0.001, "<0.001", round(chi$p.value, 3))
 )
+
 kable(result,
-      caption = "Chi-square Test of Association between Fruit and Vegetable Intake",
       booktabs = TRUE,
       align = "c")
 ```
@@ -124,6 +102,11 @@ kable(result,
 This was built upon visually using a proportional bar chart, which illustrates the distribution of vegetable consumption across different levels of fruit intake. The plot suggests that there is a strong evidence of association between fruit and vegetable intake between these variables, with proportions varying across categories, indicating that individuals with different fruit consumption levels tend to have differing vegetable consumption patterns.
 
 ```{r}
+#| fig-width: 5.5
+#| fig-height: 4
+#| out-width: "65%"
+#| fig-cap: Bar Plot depicting Fruit & Vegetable Choices
+#| label: fig-bar
 ggplot(df, aes(x = Fruit, fill = Veg)) +
    geom_bar(position = "fill") +
    labs(title='Proportion of Vegetable Intake by Fruit Consumption',
@@ -133,10 +116,15 @@ ggplot(df, aes(x = Fruit, fill = Veg)) +
 
 These findings justify the inclusion of both variables in the regression model, as they may capture related but distinct aspects of dietary behavior.
 
-In addition, quadratic relationship suggests that BMI increases with age up to middle age before gradually decreasing at older ages.
+In addition,quadratic relationship suggests that BMI increases with age up to middle age before gradually decreasing at older ages.
 
 ```{r}
- ggplot(df, aes(x = Age, y = BMI)) +
+#| fig-width: 7
+#| fig-height: 4.5
+#| out-width: "80%" 
+#| fig-cap: Scatterplot for BMI vs Age
+#| label: fig-scatter
+ggplot(df, aes(x = Age, y = BMI)) +
    geom_point(alpha = 0.3) +
    geom_smooth(method = "loess", color = "blue", se = TRUE) +
    labs(
