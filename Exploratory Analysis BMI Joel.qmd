@@ -28,6 +28,15 @@ The dataset contains observations collected between 2008 and 2012, including dem
 
 # Exploratory Analysis
 
+```{r}
+df <-read.csv("DAProject2.csv",stringsAsFactors = TRUE)
+library(tidyverse)
+library(skimr)    
+df%>%
+  select(!Year)%>%
+  skim()
+```
+
 # ```{r}
 # ggplot(df, aes(x = BMI)) +
 #   geom_histogram(binwidth = 1 , fill = "coral1", colour = "darkturquoise") +
