@@ -113,7 +113,7 @@ This was built upon visually using a proportional bar chart (Figure 2), which il
 ```{r}
 #| fig-width: 5.5
 #| fig-height: 4
-#| out-width: "65%"
+#| out-width: "60%"
 #| fig-cap: Bar Plot depicting the daily recommended Fruit & Vegetable intake
 #| label: fig-bar
 ggplot(df, aes(x = Fruit, fill = Veg)) +
@@ -193,24 +193,40 @@ $$
 
 where:
 $BMI_{i}$ : Body Mass Index for individual i
+
 $Age_i$ : Age (in years) for individual i
+
 $Sex_i$ : Indicator variable for sex of individual i
+
 $E_{ij}$ : Indicator variable for education level j of individual i
+
 $Fruit_i$ : Indicator variable for fruit intake of individual i
+
 $Veg_i$ : Indicator variable for vegetable intake of individual i
+
 $\beta_0$ : Intercept term
+
 $\beta_1$ : Coefficient representing the linear effect of age
+
 $\beta_2$ : Coefficient representing the quadratic effect of age
+
 $\beta_3$ : Coefficient representing the effect of sex
+
 $\beta_{4j}$ : Coefficients representing the effects of education levels j = 1,...,5
+
 $\beta_5$ : Coefficient representing the effect of fruit intake
+
 $\beta_6$ : Coefficient representing the effect of vegetable intake
+
 $\beta_7$ : Coefficient representing the interaction between age and sex
+
 $\gamma_{j}$ : Coefficients representing the interaction between sex and education levels j
+
 $\delta_j$ : Coefficients representing the interaction between fruit intake and education levels j
+
 $\varepsilon_i$ : Random error term for individual i
-The Reference categories in the model are Sex = Female; Education = Baseline education category (reference level); Fruit = No fruit intake; Veg = No vegetable intake. 
-All interaction terms are interpreted relative to these reference categories.
+
+The Reference categories in the model are Sex = Female; Education = Baseline education category (reference level); Fruit = No fruit intake; Veg = No vegetable intake. All interaction terms are interpreted relative to these reference categories.
 
 ### Model Selection
 To assess whether including the interaction terms improve the model fit, a model without interactions was compared with the final model including interactions.
@@ -274,7 +290,7 @@ model_data %>%
 ```
 From the confidence interval estimates, we can conclude that Age was positively associated with BMI, with an estimated increase of 0.30 BMI units per additional year, holding other variables constant. The quadratic age term was negative and statistically significant. This confirms a non-linear relationship between age and BMI, in which BMI increases with age at a decreasing rate. Individuals with no qualifications had an estimated 0.59 BMI units higher than the reference education group. Fruit intake was associated with a decrease of 0.42 BMI units compared to no fruit intake. Vegetable intake was associated with a decrease of 0.36 BMI units compared to no vegetable intake.
 
-Also to check multicollinearity, we used the VIF function from library car. The result suggests that there is no multicollinearity between the variables since the adjusted VIF is less than 5, except for Age and Age\^2. These can be ignored as they are the same variables. 
+Also to check multicollinearity, we used the VIF function from library car. The result suggests that there is no multicollinearity between the variables since the adjusted VIF is less than 5, except for Age and $Age^2$. These can be ignored as they are the same variables. 
 
 ### Diagnostics Plots
 Finally to assess the model fit, diagnostic plots from the function check_model were produced, as demonstrated in Figure 4.
