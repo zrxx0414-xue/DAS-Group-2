@@ -37,23 +37,16 @@ df%>%
   skim()
 ```
 
-# ```{r}
-# ggplot(df, aes(x = BMI)) +
-#   geom_histogram(binwidth = 1 , fill = "coral1", colour = "darkturquoise") +
-#   labs(title = "Histogram of BMI scores", xlab = "BMI", ylab = "Frequency")
-#   
-# ```
-# 
-# The histogram shows a slightly right skewed distribution, with most BMI values concentrated between approximately 22 and 32. Although this indicates a deviation from normality, the large sample size suggests that linear regression remains appropriate, subject to further diagnostic checks.
-
 ```{r}
 # Boxplot indicating constant BMI across the years of the study
-ggplot(df, aes(x = factor(Year), y = BMI)) +
+ggplot(df, aes(x = Year, y = BMI)) +
   
   # Making the plot more readable by reducing it's range on the BMI axis, and excluding outlier points
-  geom_boxplot(aes(group = Year), outlier.shape = NA) +
+  geom_boxplot(aes(group = Year), fill = "darkturquoise", colour = "grey50", outlier.shape = NA) +
   coord_cartesian(ylim = c(10, 45))
 ```
+BMI distributions appear to be consistent across each year of the, suggesting that the year of the  survey is not a significant predictor. Below is a grid of scatterplots, showing the spread of BMI at the two most extreme education levels only, where we can see some relationship between sex, socioeconomic status, lifestyle factors, and BMI.
+
 
 ```{r}
 
@@ -67,31 +60,20 @@ df$Education <- factor(df$Education,
 # Subset of the data which will help to create a more readable exploratory plot
 df_subset <- df %>%
   filter(Education %in% c("No qualifications", "Degree or higher"))
-# Creates a normalised table indicating the portions of participants at each education level who meet each category of fruit
-healthEdu <- table(df$FruitVeg, df$Education)
-healthEduNorm <- sweep(healthEdu, 2, colSums(healthEdu), FUN = "/")
-rownames(healthEduNorm) <- c("Neither", "Fruit only", "Veg only", "Both")
+
 ggplot(df_subset, aes(x = Age, y = BMI)) + 
   
   geom_point(aes(colour = FruitVeg), size = 1.0) +
   
   facet_grid(Sex ~ Education) +
   
-  # Mean line for reference
-  stat_summary(
-    aes(linetype = "Mean BMI"),       # maps the line to a new legend 
-    fun = mean,
-    geom = "line",
-    colour = "grey20",
-    size = 1.0) +
-  
   # legend labels
   scale_colour_manual(
     values = c(
       "No.No" = "red",
-      "Yes.No" = "orange",
-      "No.Yes" = "yellow",
-      "Yes.Yes" = "green"),
+      "Yes.No" = "coral1",
+      "No.Yes" = "darkorange",
+      "Yes.Yes" = "darkturquoise"),
     
     labels = c(
       "No.No" = "Neither",
@@ -99,13 +81,11 @@ ggplot(df_subset, aes(x = Age, y = BMI)) +
       "No.Yes" = "Veg Only",
       "Yes.Yes" = "Both")) +
   
-  scale_linetype_manual(
-    values = c("Mean BMI" = "solid")) +
-  
   # Legend title
-  labs(colour = "Recommended fruit/veg intake?", linetype = "")
+  labs(colour = "Recommended fruit/veg intake?")
 ```
 
+BMI appears to be higher among those with poorer levels of education diets compared to those that are highly educated and follow better diets respectively. BMI also appears more varied among females than males. There appears to be some correlation between fruit and vegetable intake, and education level, but this is not significant, so we will likely include both socioeconomic and lifestyle factors in our model.
 To further explore relationships between lifestyle factors, a chi-squared test was conducted to assess the association between fruit and vegetable consumption. The results of the test indicated whether these variables are independent or exhibit a significant relationship.
 
 ```{r}
@@ -135,7 +115,7 @@ ggplot(df, aes(x = Fruit, fill = Veg)) +
 
 These findings justify the inclusion of both variables in the regression model, as they may capture related but distinct aspects of dietary behavior.
 
-In addition,quadratic relationship suggests that BMI increases with age up to middle age before gradually decreasing at older ages.
+In addition, quadratic relationship suggests that BMI increases with age up to middle age before gradually decreasing at older ages.
 
 ```{r}
  ggplot(df, aes(x = Age, y = BMI)) +
